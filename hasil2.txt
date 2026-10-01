@@ -1,0 +1,15 @@
+EKSTRA n=200 seed=1 fcfs | wait_max=201.86 | energi_Wh=90.6
+EKSTRA n=200 seed=1 sjf | wait_max=214.16 | energi_Wh=105.7
+EKSTRA n=200 seed=1 hrrn | wait_max=189.62 | energi_Wh=102.1
+EKSTRA n=200 seed=2 fcfs | wait_max=200.88 | energi_Wh=99.2
+EKSTRA n=200 seed=2 sjf | wait_max=218.44 | energi_Wh=98.1
+EKSTRA n=200 seed=2 hrrn | wait_max=188.95 | energi_Wh=101.8
+EKSTRA n=200 seed=3 fcfs | wait_max=196.72 | energi_Wh=99.6
+EKSTRA n=200 seed=3 sjf | wait_max=214.79 | energi_Wh=108.4
+EKSTRA n=200 seed=3 hrrn | wait_max=190.19 | energi_Wh=104.9
+EKSTRA n=200 seed=4 fcfs | wait_max=199.33 | energi_Wh=103.6
+EKSTRA n=200 seed=4 sjf | wait_max=213.82 | energi_Wh=99.8
+EKSTRA n=200 seed=4 hrrn | wait_max=195.24 | energi_Wh=101.0
+EKSTRA n=200 seed=5 fcfs | wait_max=191.26 | energi_Wh=109.5
+EKSTRA n=200 seed=5 sjf | wait_max=195.21 | energi_Wh=102.6
+EKSTRA n=200 seed=5 hrrn | wait_max=188.72 | energi_Wh=103.6

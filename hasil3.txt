@@ -1,0 +1,10 @@
+rule=fast EKSTRA n=200 seed=1 hrrn | makespan=351.89 | wait_max=189.62 | energi_Wh=102.1
+rule=fast EKSTRA n=200 seed=2 hrrn | makespan=350.60 | wait_max=188.95 | energi_Wh=101.8
+rule=fast EKSTRA n=200 seed=3 hrrn | makespan=362.74 | wait_max=190.19 | energi_Wh=104.9
+rule=fast EKSTRA n=200 seed=4 hrrn | makespan=349.22 | wait_max=195.24 | energi_Wh=101.0
+rule=fast EKSTRA n=200 seed=5 hrrn | makespan=357.35 | wait_max=188.72 | energi_Wh=103.6
+rule=green EKSTRA n=200 seed=1 hrrn | makespan=360.55 | wait_max=190.41 | energi_Wh=104.1
+rule=green EKSTRA n=200 seed=2 hrrn | makespan=332.21 | wait_max=186.18 | energi_Wh=97.5
+rule=green EKSTRA n=200 seed=3 hrrn | makespan=356.94 | wait_max=195.02 | energi_Wh=103.5
+rule=green EKSTRA n=200 seed=4 hrrn | makespan=342.52 | wait_max=193.05 | energi_Wh=99.8
+rule=green EKSTRA n=200 seed=5 hrrn | makespan=345.53 | wait_max=194.55 | energi_Wh=100.6
