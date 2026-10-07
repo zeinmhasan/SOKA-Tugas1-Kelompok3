@@ -27,7 +27,7 @@ Penjadwalan task (*task scheduling*) menentukan task mana yang dijalankan lebih 
 
 1. Membangun simulasi cloud heterogen (2 datacenter, 10 host, 20 VM) di CloudSim Plus sesuai draf desain kelompok.
 2. Mengimplementasikan scheduler HRRN dan memverifikasi kebenaran logikanya.
-3. Membandingkan HRRN dengan FCFS dan SJF pada beberapa tingkat beban kerja.
+3. Membandingkan HRRN dengan FCFS dan SJF pada lima ukuran workload (60, 200, 1.000, 5.000, dan 10.000 cloudlet), masing-masing 3 kali simulasi per algoritma lalu dirata-rata, untuk melihat apakah hasil pada beban ringan dan beban berat sama.
 4. Mengukur objective pada draf desain, yaitu **makespan** dan **energy consumption**, beserta metrik pendukung.
 
 ### 1.3 Ruang lingkup dan perbedaan dengan draf desain
@@ -37,7 +37,7 @@ Penjadwalan task (*task scheduling*) menentukan task mana yang dijalankan lebih 
 | Mixed workload (small/medium/large) | Dipakai, dibangkitkan secara sintetis |
 | Dataset cloud dari luar | **Belum dipakai** (lihat bagian 8) |
 | 2 datacenter, 10 host heterogen, 20 VM | Dipakai |
-| 100-500 cloudlet | Dipakai sebagai 60, 200, dan 400 cloudlet |
+| 100-500 cloudlet | Diperluas (revisi) menjadi 60, 200, 1.000, 5.000, dan 10.000 cloudlet |
 | Arrival time, deadline, ukuran input/output | Dipakai. Deadline adalah asumsi kami |
 | Priority | **Tidak dipakai** (HRRN tidak memakai priority) |
 | Dependency antar task | **Belum diimplementasikan** |
@@ -100,7 +100,8 @@ Semua workload dibangkitkan secara sintetis dan dapat diulang (seed tetap).
 
 - Setiap cloudlet memakai 1 core, ukuran file input dan output 300 byte.
 - **Panjang task** selalu memakai seed 42. Jadi tiap jumlah cloudlet memakai deret panjang yang sama.
-- **Arrival time** acak seragam pada detik 0 sampai 60. Seed arrival divariasikan (seed 1-5 untuk percobaan utama, ditambah seed 7 pada n = 60).
+- **Arrival time** acak seragam pada detik 0 sampai 60, untuk semua ukuran workload. Karena jendela kedatangan tetap, menambah jumlah cloudlet berarti menambah kepadatan beban.
+- **Pengulangan:** setiap kombinasi ukuran workload dan algoritma disimulasikan 3 kali dengan seed arrival 1, 2, dan 3, lalu hasilnya dirata-rata. Simulasi bersifat deterministik, sehingga pengulangan dengan seed yang sama akan memberi angka yang sama persis; karena itu yang divariasikan adalah seed arrival.
 - **Deadline** = `arrival + f × service time`, dengan `f` acak 3 sampai 8 dan service time = `panjang / 1400 MIPS`. Ini asumsi kami.
 
 ### 3.3 Scheduler
@@ -171,7 +172,8 @@ Energi total = (jumlah daya idle semua host × makespan) + (daya dinamis per cor
 | 2 | 20 cloudlet dengan scheduler bawaan | Semua selesai, makespan 69,75 s |
 | 3 | Uji logika HRRN di luar CloudSim | Cocok dengan perhitungan manual |
 | 4 | HRRN, FCFS, SJF di dalam CloudSim dengan arrival bertahap dan metrik lengkap | Bagian 6 |
-| 5 | Model energi dan aturan pemilihan VM | Bagian 6.4 dan 6.5 |
+| 5 | Model energi dan aturan pemilihan VM | Bagian 6.3 dan 6.5 |
+| 6 | Revisi: 5 ukuran workload × 3 algoritma × 3 simulasi dalam satu program (`Tahap5.java`) | Bagian 6.2 sampai 6.4 |
 
 ### 5.2 Kendala teknis dan pelajaran
 
@@ -196,42 +198,81 @@ Semua baris di bawah telah diverifikasi bahwa seluruh cloudlet selesai (jumlah s
 
 Pada skenario ini waktu tunggu semua task sama saat t = 0, sehingga HRRN berperilaku mirip SJF (task pendek didahulukan). Sifat khas HRRN baru terlihat saat arrival bertahap.
 
-### 6.2 Skenario B: arrival bertahap, n = 60 (rata-rata 6 seed)
+### 6.2 Skenario B: arrival bertahap, waktu tunggu dan response (rata-rata 3 simulasi)
 
-| Metrik | FCFS | SJF | HRRN |
-|---|---|---|---|
-| Makespan (s) | 160,2 | 166,6 | 159,1 |
-| Response (s) | 31,85 | 30,32 | 30,47 |
-| Waktu tunggu (s) | 4,47 | 3,07 | 3,33 |
-| Throughput (task/s) | 0,381 | 0,368 | 0,380 |
-| Utilisasi CPU (%) | 52,2 | 50,1 | 51,6 |
-| Load imbalance | 0,28 | 0,31 | 0,30 |
-| Task lewat deadline (total dari 6 seed) | 1 | 0 | 0 |
-
-Pada beban ringan, sistem belum padat (utilisasi sekitar 50%), sehingga antrean pendek dan perbedaan antar kebijakan kecil.
-
-### 6.3 Skenario C: beban berat (rata-rata 5 seed)
+Bagian 6.2 sampai 6.4 adalah hasil eksperimen revisi: 5 ukuran workload × 3 algoritma × 3 simulasi (seed arrival 1-3) = 45 simulasi. Angka mentah tiap simulasi dan rata-ratanya ada di `hasil_revisi.txt`.
 
 | n | Metrik | FCFS | SJF | HRRN |
 |---|---|---|---|---|
-| 200 | Waktu tunggu (s) | 89,6 | 43,3 | 45,8 |
-| 200 | Response (s) | 117,5 | 71,2 | 74,0 |
-| 200 | Task lewat deadline (rata-rata per seed) | 86,4 | 4,4 | 2,6 |
-| 200 | Makespan (s) | 345,4 | 356,0 | 354,4 |
-| 400 | Waktu tunggu (s) | 240,3 | 117,5 | 120,1 |
-| 400 | Response (s) | 269,6 | 146,8 | 149,5 |
-| 400 | Task lewat deadline (rata-rata per seed) | 279,4 | 120,0 | 127,8 |
-| 400 | Makespan (s) | 666,8 | 664,1 | 670,3 |
+| 60 | Waktu tunggu (s) | 4,01 | 2,92 | 3,00 |
+| 60 | Response (s) | 31,54 | 30,24 | 30,07 |
+| 200 | Waktu tunggu (s) | 90,21 | 41,03 | 43,78 |
+| 200 | Response (s) | 117,97 | 68,94 | 72,01 |
+| 1.000 | Waktu tunggu (s) | 699,07 | 353,47 | 355,52 |
+| 1.000 | Response (s) | 728,97 | 383,41 | 385,47 |
+| 5.000 | Waktu tunggu (s) | 3.510,81 | 1.814,99 | 1.822,97 |
+| 5.000 | Response (s) | 3.539,53 | 1.843,70 | 1.851,69 |
+| 10.000 | Waktu tunggu (s) | 7.036,87 | 3.631,99 | 3.637,57 |
+| 10.000 | Response (s) | 7.065,30 | 3.660,42 | 3.666,00 |
 
-### 6.4 Waktu tunggu terlama dan energi (n = 200, rata-rata 5 seed)
+Perubahan relatif HRRN, dihitung dari tabel di atas (nilai negatif berarti HRRN lebih rendah):
 
-| | FCFS | SJF | HRRN |
-|---|---|---|---|
-| Waktu tunggu terlama, rata-rata (s) | 198,0 | 211,3 | 190,5 |
-| Waktu tunggu terlama, terburuk dari 5 seed (s) | 201,9 | 218,4 | 195,2 |
-| Energi rata-rata (Wh) | 100,5 | 102,9 | 102,7 |
+| n | Waktu tunggu HRRN vs FCFS | Response HRRN vs FCFS | Waktu tunggu HRRN vs SJF | Task lewat deadline (FCFS / SJF / HRRN) |
+|---|---|---|---|---|
+| 60 | −25,2% | −4,7% | +2,7% | 0,0% / 0,0% / 0,0% |
+| 200 | −51,5% | −39,0% | +6,7% | 44,0% / 1,5% / 1,0% |
+| 1.000 | −49,1% | −47,1% | +0,6% | 88,5% / 82,1% / 88,3% |
+| 5.000 | −48,1% | −47,7% | +0,4% | 97,8% / 95,3% / 98,3% |
+| 10.000 | −48,3% | −48,1% | +0,2% | 98,9% / 97,2% / 99,1% |
+
+### 6.3 Makespan, throughput, utilisasi, dan energi (rata-rata 3 simulasi)
+
+| n | Metrik | FCFS | SJF | HRRN |
+|---|---|---|---|---|
+| 60 | Makespan (s) | 155,8 | 177,9 | 162,9 |
+| 60 | Throughput (task/s) | 0,388 | 0,341 | 0,368 |
+| 60 | Utilisasi CPU (%) | 53,4 | 46,5 | 49,9 |
+| 60 | Load imbalance | 0,28 | 0,32 | 0,31 |
+| 60 | Energi (Wh) | 42,5 | 47,7 | 44,0 |
+| 200 | Makespan (s) | 329,0 | 361,0 | 355,1 |
+| 200 | Throughput (task/s) | 0,610 | 0,555 | 0,563 |
+| 200 | Utilisasi CPU (%) | 84,6 | 77,5 | 79,5 |
+| 200 | Load imbalance | 0,06 | 0,13 | 0,13 |
+| 200 | Energi (Wh) | 96,5 | 104,1 | 102,9 |
+| 1.000 | Makespan (s) | 1.549,5 | 1.584,3 | 1.584,6 |
+| 1.000 | Throughput (task/s) | 0,645 | 0,631 | 0,631 |
+| 1.000 | Utilisasi CPU (%) | 96,5 | 94,5 | 94,5 |
+| 1.000 | Load imbalance | 0,02 | 0,03 | 0,03 |
+| 1.000 | Energi (Wh) | 466,2 | 474,4 | 474,6 |
+| 5.000 | Makespan (s) | 7.257,0 | 7.251,7 | 7.250,5 |
+| 5.000 | Throughput (task/s) | 0,689 | 0,689 | 0,690 |
+| 5.000 | Utilisasi CPU (%) | 98,9 | 99,0 | 99,0 |
+| 5.000 | Load imbalance | 0,00 | 0,00 | 0,00 |
+| 5.000 | Energi (Wh) | 2.194,8 | 2.193,4 | 2.193,2 |
+| 10.000 | Makespan (s) | 14.308,2 | 14.298,9 | 14.298,1 |
+| 10.000 | Throughput (task/s) | 0,699 | 0,699 | 0,699 |
+| 10.000 | Utilisasi CPU (%) | 99,4 | 99,4 | 99,4 |
+| 10.000 | Load imbalance | 0,00 | 0,00 | 0,00 |
+| 10.000 | Energi (Wh) | 4.331,2 | 4.328,9 | 4.328,7 |
+
+### 6.4 Waktu tunggu terlama dan task lewat deadline (rata-rata 3 simulasi)
+
+| n | Metrik | FCFS | SJF | HRRN |
+|---|---|---|---|---|
+| 60 | Waktu tunggu terlama (s) | 14,1 | 26,0 | 23,2 |
+| 60 | Task lewat deadline | 0,0 | 0,0 | 0,0 |
+| 200 | Waktu tunggu terlama (s) | 199,8 | 215,8 | 189,6 |
+| 200 | Task lewat deadline | 88,0 | 3,0 | 2,0 |
+| 1.000 | Waktu tunggu terlama (s) | 1.405,6 | 1.416,5 | 1.403,5 |
+| 1.000 | Task lewat deadline | 885,3 | 821,3 | 883,0 |
+| 5.000 | Waktu tunggu terlama (s) | 7.085,7 | 7.098,6 | 7.082,2 |
+| 5.000 | Task lewat deadline | 4.890,3 | 4.763,0 | 4.913,3 |
+| 10.000 | Waktu tunggu terlama (s) | 14.127,8 | 14.129,3 | 14.112,8 |
+| 10.000 | Task lewat deadline | 9.889,0 | 9.720,0 | 9.907,7 |
 
 ### 6.5 Aturan pemilihan VM (HRRN, n = 200, rata-rata 5 seed)
+
+Bagian ini berasal dari percobaan sebelum revisi (5 seed arrival) dan tidak diulang pada eksperimen revisi.
 
 | Aturan VM | Makespan (s) | Energi (Wh) |
 |---|---|---|
@@ -242,37 +283,41 @@ Pada beban ringan, sistem belum padat (utilisasi sekitar 50%), sehingga antrean 
 
 ## 7. Analisis
 
-**1. Beban berat: HRRN dan SJF jauh lebih baik dari FCFS.** Pada n = 200 dan n = 400, HRRN menurunkan waktu tunggu rata-rata sekitar 49-50% dan response rata-rata sekitar 37-45% dibanding FCFS. Jumlah task yang melewati deadline turun drastis (n = 200: dari 86,4 menjadi 2,6). Hasil ini konsisten dengan prinsip bahwa mendahulukan task pendek menurunkan rata-rata waktu tunggu.
+**1. Hasil pada beban ringan dan beban berat tidak sama.** Ini jawaban atas pertanyaan revisi. Pada n = 60 sistem hanya terpakai sekitar 50%, antrean jarang terbentuk, dan ketiga algoritma hampir tidak berbeda: selisih waktu tunggu sekitar 1 detik dan selisih response sekitar 1,5 detik dari sekitar 31 detik. Mulai n = 200 sistem padat (utilisasi 78-85%, lalu 95-99% pada n ≥ 1.000) dan perbedaan antar algoritma menjadi besar.
 
-**2. Beban ringan: perbedaan kecil.** Pada n = 60, sistem hanya terpakai sekitar 50% sehingga jarang ada antrean. Selisih response antar kebijakan sekitar 1,5 detik dari sekitar 31 detik, dan selisih ini tidak cukup kuat untuk menyimpulkan kebijakan mana yang lebih baik.
+**2. Pada beban berat, HRRN dan SJF memangkas waktu tunggu dan response sekitar separuh dibanding FCFS, dan besarnya stabil.** Waktu tunggu rata-rata HRRN lebih rendah 51,5% (n = 200), 49,1% (n = 1.000), 48,1% (n = 5.000), dan 48,3% (n = 10.000). Response rata-rata turun 39,0% pada n = 200 dan 47-48% pada n ≥ 1.000. Jadi keuntungan relatif tidak membesar terus seiring beban, melainkan mendatar di sekitar 48%.
 
-**3. HRRN dan SJF hampir sama pada rata-rata.** SJF sedikit lebih rendah pada waktu tunggu rata-rata (sekitar 5% pada n = 200 dan sekitar 2% pada n = 400). Pada jumlah task lewat deadline urutannya berubah: HRRN lebih baik pada n = 200 (2,6 vs 4,4) tetapi lebih buruk pada n = 400 (127,8 vs 120,0). Karena tidak konsisten, kami tidak menyimpulkan salah satunya lebih unggul di metrik rata-rata.
+**3. HRRN dan SJF makin mirip saat beban makin berat.** SJF selalu sedikit lebih rendah pada waktu tunggu rata-rata, tetapi selisihnya mengecil: 6,7% pada n = 200, lalu 0,6%, 0,4%, dan 0,2% pada n = 1.000, 5.000, dan 10.000. Dugaan kami, karena semua task datang dalam 60 detik pertama sedangkan antrean baru habis setelah ribuan detik, waktu tunggu semua task menjadi hampir sama besar sehingga urutan RR pada HRRN hampir sama dengan urutan panjang task pada SJF. Dugaan ini tidak kami uji secara terpisah.
 
-**4. Keunggulan HRRN terlihat pada waktu tunggu terlama.** Pada n = 200, waktu tunggu terlama HRRN (190,5 s) sekitar 10% lebih rendah dari SJF (211,3 s) dan sekitar 4% lebih rendah dari FCFS (198,0 s). Pola ini sejalan dengan tujuan HRRN mencegah task panjang menunggu terlalu lama, sementara SJF bisa menunda task panjang paling lama. Mengingat hanya 5 seed dan selisihnya beberapa persen, hasil ini kami tulis sebagai **kecenderungan**, bukan bukti pasti.
+**4. Keunggulan HRRN pada task lewat deadline hanya muncul di beban menengah.** Pada n = 200, FCFS melewatkan deadline 44,0% task, sedangkan SJF 1,5% dan HRRN 1,0%. Pada n ≥ 1.000 sistem terlalu padat untuk rumus deadline yang kami pakai: 82-99% task lewat deadline di semua algoritma. Pada kondisi ini SJF yang paling sedikit (82,1% pada n = 1.000), sedangkan HRRN setara FCFS (88,3% vs 88,5%). Pada n = 60 tidak ada task yang lewat deadline.
 
-**5. Makespan tidak punya pemenang yang konsisten.** Selisih makespan antar kebijakan di bawah sekitar 5% pada n = 60, sekitar 3% pada n = 200, dan sekitar 1% pada n = 400, dan urutan terbaiknya berganti antar kondisi. Pada beberapa seed ketiga kebijakan bahkan menghasilkan makespan identik, yang menunjukkan makespan ditentukan oleh satu task panjang, bukan oleh urutan antrean. Pada skenario A, makespan HRRN sempat lebih tinggi dari FCFS, tetapi pada percobaan dengan banyak seed pola itu tidak konsisten.
+**5. Waktu tunggu terlama: HRRN terendah pada beban menengah, lalu selisihnya hilang.** Pada n = 200, waktu tunggu terlama HRRN (189,6 s) sekitar 12% di bawah SJF (215,8 s) dan 5% di bawah FCFS (199,8 s), sejalan dengan tujuan HRRN mencegah starvation. Pada n ≥ 1.000 HRRN masih yang terendah, tetapi selisihnya di bawah 1% karena waktu tunggu terlama praktis ditentukan oleh panjang antrean total. Pada n = 60 urutannya berbeda: FCFS terendah (14,1 s), HRRN 23,2 s, SJF 26,0 s.
 
-**6. Makespan dan energi tidak bertentangan pada model ini.** Draf desain memperkirakan makespan dan energi bisa bertentangan. Pada simulasi ini energi mengikuti makespan: energi FCFS (100,5 Wh) sedikit lebih rendah karena makespan-nya pada n = 200 juga terendah. Penyebabnya adalah asumsi model energi: host menyala terus, dan daya idle (860 W untuk seluruh host) jauh lebih besar daripada daya tambahan saat task berjalan. Akibatnya energi kira-kira sebanding dengan makespan. Aturan VM `green` memberi hasil sedikit lebih baik pada kedua metrik (makespan 347,6 vs 354,4 s; energi 101,1 vs 102,7 Wh, selisih sekitar 2%). Penyebab makespan ikut turun tidak kami selidiki, dan selisih sekecil ini dari 5 seed belum cukup untuk menyatakan `green` lebih baik. Untuk memunculkan trade-off makespan vs energi, model perlu mampu mematikan host yang menganggur, dan hal itu belum dilakukan.
+**6. Makespan dan energi hanya berbeda pada beban ringan sampai menengah.** FCFS memiliki makespan terendah pada n = 60 (155,9 s vs 162,9 s HRRN dan 177,9 s SJF), n = 200 (329,0 vs 355,1 dan 361,0), dan n = 1.000 (selisih sekitar 2%). Pada n = 5.000 dan 10.000 selisih makespan ketiga algoritma di bawah 0,1%, karena semua VM sibuk hampir sepanjang waktu (utilisasi 99%) sehingga urutan antrean tidak lagi mengubah total waktu kerja. Pada n = 60 selisihnya besar tetapi tidak stabil antar simulasi (makespan SJF 163,9 sampai 204,6 s), sehingga dari 3 simulasi kami tidak menyimpulkan pemenang makespan di beban ringan.
+
+**7. Energi mengikuti makespan.** Draf desain memperkirakan makespan dan energi bisa bertentangan. Pada simulasi ini urutan energi selalu sama dengan urutan makespan di semua ukuran workload. Penyebabnya asumsi model energi: host menyala terus, dan daya idle (860 W untuk seluruh host) jauh lebih besar daripada daya tambahan saat task berjalan. Aturan VM `green` (bagian 6.5) memberi hasil sedikit lebih baik pada kedua metrik (selisih sekitar 2%), tetapi selisih sekecil ini belum cukup untuk menyatakan `green` lebih baik. Untuk memunculkan trade-off makespan vs energi, model perlu mampu mematikan host yang menganggur, dan hal itu belum dilakukan.
 
 ---
 
 ## 8. Batasan
 
 1. **Dataset sintetis.** Workload dibangkitkan sendiri, belum memakai dataset cloud publik (misalnya GoCJ) seperti yang diusulkan draf.
-2. **Variasi terbatas.** Panjang task selalu memakai seed yang sama (42); hanya arrival time yang divariasikan, dan hanya 5-6 seed. Selisih kecil (beberapa persen) tidak dapat dianggap signifikan secara statistik, dan tidak dilakukan uji statistik.
-3. **Asumsi kelompok.** Kecepatan VM, komposisi host, rumus deadline, dan model energi adalah asumsi, bukan data nyata.
-4. **Fitur draf yang belum ada.** Dependency antar task belum diimplementasikan, priority tidak dipakai, dan average execution time tidak dilaporkan terpisah.
-5. **Distribusi VM antar datacenter timpang** (6 VM di DC 1, 14 VM di DC 2) karena perilaku broker bawaan.
-6. **Mekanisme beberapa kendala teknis** (bagian 5.2, poin 1 dan 2) dibuktikan lewat percobaan perilaku, tetapi tidak diselidiki sampai ke kode internal CloudSim Plus.
+2. **Variasi terbatas.** Panjang task selalu memakai seed yang sama (42); hanya arrival time yang divariasikan, dan hanya 3 simulasi per kombinasi. Selisih kecil (beberapa persen) tidak dapat dianggap signifikan secara statistik, dan tidak dilakukan uji statistik.
+3. **Beban berat berarti antrean menumpuk.** Jendela kedatangan tetap 0-60 detik, sehingga pada n ≥ 1.000 hampir semua task sudah mengantre sejak awal dan kondisinya mendekati skenario "semua task datang bersamaan". Hasil beban berat tidak mewakili kondisi kedatangan terus-menerus dengan laju tinggi.
+4. **Asumsi kelompok.** Kecepatan VM, komposisi host, rumus deadline, dan model energi adalah asumsi, bukan data nyata.
+5. **Fitur draf yang belum ada.** Dependency antar task belum diimplementasikan, priority tidak dipakai, dan average execution time tidak dilaporkan terpisah.
+6. **Distribusi VM antar datacenter timpang** (6 VM di DC 1, 14 VM di DC 2) karena perilaku broker bawaan.
+7. **Mekanisme beberapa kendala teknis** (bagian 5.2, poin 1 dan 2) dibuktikan lewat percobaan perilaku, tetapi tidak diselidiki sampai ke kode internal CloudSim Plus.
 
 ---
 
 ## 9. Kesimpulan
 
 1. Simulasi cloud heterogen (2 datacenter, 10 host, 20 VM) dan scheduler HRRN berhasil dibangun di CloudSim Plus, dan logika HRRN terverifikasi dengan perhitungan manual.
-2. Pada beban berat (200 dan 400 task), HRRN dan SJF menurunkan waktu tunggu dan response sekitar separuh dibanding FCFS, dan jumlah task yang melewati deadline turun drastis.
-3. HRRN dan SJF hampir sama pada metrik rata-rata. HRRN cenderung memiliki waktu tunggu terlama yang lebih rendah (sekitar 10% di bawah SJF pada n = 200), sesuai tujuan pencegahan starvation.
-4. Makespan tidak dibedakan secara konsisten oleh kebijakan antrean, dan energi mengikuti makespan pada model energi yang dipakai.
+2. Hasil beban ringan dan beban berat **tidak sama**. Pada 60 task ketiga algoritma hampir tidak berbeda; pada 200 sampai 10.000 task, HRRN dan SJF menurunkan waktu tunggu rata-rata sekitar 48-52% dan response 39-48% dibanding FCFS.
+3. HRRN dan SJF hampir sama pada metrik rata-rata, dan makin mirip saat beban makin berat (selisih waktu tunggu 6,7% pada 200 task, 0,2% pada 10.000 task).
+4. Keunggulan khas HRRN (waktu tunggu terlama lebih rendah, task lewat deadline lebih sedikit) terlihat pada beban menengah (200 task). Pada beban sangat berat keunggulan itu hilang: waktu tunggu terlama ketiga algoritma berselisih di bawah 1% dan hampir semua task lewat deadline.
+5. Makespan dan energi hanya berbeda antar algoritma pada beban ringan sampai menengah (FCFS terendah); pada 5.000 dan 10.000 task selisihnya di bawah 0,1%. Energi mengikuti makespan pada model energi yang dipakai.
 
 **Saran pengembangan:** memakai dataset publik dengan variasi panjang task, menambah jumlah seed dan uji statistik, menambahkan dependency antar task, serta memperluas model energi dengan mematikan host menganggur agar trade-off makespan vs energi dapat diamati.
 
@@ -280,7 +325,46 @@ Pada beban ringan, sistem belum padat (utilisasi sekitar 50%), sehingga antrean 
 
 ## Lampiran A. Cara menjalankan
 
-Folder proyek memakai Maven dengan dependensi `org.cloudsimplus:cloudsimplus:8.5.2`. File utama simulasi adalah `Tahap4.java` (dengan `Tahap1.java` sebagai pembuat host dan VM).
+### A.1 Prasyarat
+
+- **JDK 21** dan **Maven** (dependensi `org.cloudsimplus:cloudsimplus:8.5.2` diunduh otomatis oleh Maven saat pertama kali dijalankan, jadi perlu koneksi internet).
+- Cek instalasi dengan `java -version` dan `mvn -v`. Di macOS keduanya bisa dipasang dengan `brew install maven` (sudah membawa JDK); di Windows/Linux pasang JDK 21 dan Maven lalu pastikan keduanya ada di `PATH`.
+- Semua perintah dijalankan dari folder utama proyek (folder yang berisi `pom.xml`).
+
+### A.2 Eksperimen revisi (hasil bagian 6.2 sampai 6.4)
+
+Satu perintah menjalankan 5 ukuran workload × 3 algoritma × 3 simulasi (45 simulasi, sekitar 1 menit) lewat `Tahap5.java`:
+
+```bash
+mvn -q compile exec:java -Dexec.mainClass=org.example.Tahap5 > hasil_revisi.txt
+```
+
+Hasilnya tersimpan di `hasil_revisi.txt`. Rata-rata per algoritma ada di bagian paling bawah file, atau bisa disaring dengan:
+
+```bash
+grep '^RATA' hasil_revisi.txt
+```
+
+- Baris `RUN` berisi hasil satu simulasi (seed arrival = nomor simulasi).
+- Baris `RATA` berisi rata-rata semua simulasi untuk satu algoritma pada satu ukuran workload.
+- Program berhenti dengan error jika ada simulasi yang cloudlet-nya tidak selesai semua.
+
+Pilihan tambahan:
+
+| Opsi | Bawaan | Keterangan |
+|---|---|---|
+| `-Dns=60,200,1000` | `60,200,1000,5000,10000` | Daftar ukuran workload (jumlah cloudlet) |
+| `-Druns=5` | `3` | Jumlah simulasi per algoritma (memakai seed arrival 1 sampai `runs`) |
+| `-DvmRule=green` | `fast` | Aturan pemilihan VM |
+
+```bash
+# contoh: hanya 60 dan 200 cloudlet, 5 simulasi per algoritma
+mvn -q compile exec:java -Dexec.mainClass=org.example.Tahap5 -Dns=60,200 -Druns=5
+```
+
+### A.3 Satu simulasi saja
+
+`Tahap4.java` menjalankan satu simulasi (dengan `Tahap1.java` sebagai pembuat host dan VM):
 
 ```bash
 # satu kebijakan (fcfs | sjf | hrrn), jumlah task n, seed arrival
@@ -293,6 +377,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.example.Tahap4 \
 ```
 
 Format keluaran `HASIL`: jumlah selesai, makespan, response, waktu tunggu, throughput, utilisasi, load imbalance, dan jumlah task lewat deadline. Format keluaran `EKSTRA`: makespan, waktu tunggu terlama, dan energi (Wh).
+
+### A.4 Uji logika HRRN (bagian 2.1)
+
+```bash
+mvn -q compile exec:java -Dexec.mainClass=org.example.HrrnUji
+```
 
 ## Lampiran B. Cuplikan kode inti
 

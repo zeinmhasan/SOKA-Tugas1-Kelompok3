@@ -21,9 +21,33 @@ public class Tahap4 {
     static final Map<Cloudlet, Double> deadline = new IdentityHashMap<>();
     static final Set<Cloudlet> pemicu = Collections.newSetFromMap(new IdentityHashMap<>());
     static double mipsAcuan;
-    static final String KEBIJAKAN = System.getProperty("policy", "hrrn");
+    static String KEBIJAKAN = System.getProperty("policy", "hrrn");
+
+    // Seluruh metrik dari satu kali simulasi
+    record Hasil(int selesai, double makespan, double resp, double tunggu, double throughput,
+                 double util, double imbalance, long telat, double tungguMaks, double energiWh) {}
 
     public static void main(String[] args) {
+        int n = Integer.getInteger("n", 60);
+        Hasil h = jalankan(KEBIJAKAN, ATURAN_VM, n, Long.getLong("seed", 7));
+
+        System.out.printf("HASIL %-4s | selesai=%d | makespan=%.2f | resp=%.2f | tunggu=%.2f | throughput=%.3f task/s | util=%.1f%% | imbalance=%.2f | lewat deadline=%d%n",
+                KEBIJAKAN, h.selesai(), h.makespan(), h.resp(), h.tunggu(), h.throughput(), h.util(),
+                h.imbalance(), h.telat());
+        System.out.printf("EKSTRA n=%d seed=%s %s | makespan=%.2f | wait_max=%.2f | energi_Wh=%.1f%n",
+                n, System.getProperty("seed", "7"), KEBIJAKAN, h.makespan(), h.tungguMaks(), h.energiWh());
+    }
+
+    // Satu kali simulasi. State static direset supaya bisa dipanggil berulang dalam satu JVM (dipakai Tahap5).
+    static Hasil jalankan(String kebijakan, String aturanVm, int n, long seed) {
+        KEBIJAKAN = kebijakan;
+        ATURAN_VM = aturanVm;
+        menunggu.clear();
+        vmBebas.clear();
+        arrival.clear();
+        deadline.clear();
+        pemicu.clear();
+
         sim = new CloudSimPlus();
 
         new DatacenterSimple(sim, List.of(
@@ -44,9 +68,8 @@ public class Tahap4 {
         for (int i = 0; i < 8; i++) vms.add(Tahap1.createVm(1000, 2, 4));
         mipsAcuan = vms.stream().mapToDouble(Vm::getMips).average().orElse(1000);
 
-        int n = Integer.getInteger("n", 60);
         var rndLen = new Random(42);
-        var rndArr = new Random(Long.getLong("seed", 7));
+        var rndArr = new Random(seed);
         var rndDl = new Random(99);
         List<Cloudlet> semuaPemicu = new ArrayList<>();
 
@@ -86,8 +109,7 @@ public class Tahap4 {
         broker.addOnVmsCreatedListener(info -> dispatch());
         sim.start();
 
-        laporanLama(vms);
-        laporanTambahan(vms);
+        return hitungHasil(vms);
     }
 
     static void dispatch() {
@@ -123,12 +145,13 @@ public class Tahap4 {
         return (tunggu + service) / service;
     }
 
-    static void laporanLama(List<Vm> vms) {
+    static Hasil hitungHasil(List<Vm> vms) {
         var real = broker.getCloudletFinishedList().stream()
                 .filter(c -> !pemicu.contains(c)).toList();
         double makespan = real.stream().mapToDouble(Cloudlet::getFinishTime).max().orElse(0);
         double resp = real.stream().mapToDouble(c -> c.getFinishTime() - arrival.get(c)).average().orElse(0);
         double wait = real.stream().mapToDouble(c -> c.getStartTime() - arrival.get(c)).average().orElse(0);
+        double maxWait = real.stream().mapToDouble(c -> c.getStartTime() - arrival.get(c)).max().orElse(0);
         long telat = real.stream().filter(c -> c.getFinishTime() > deadline.get(c)).count();
 
         Map<Long, Double> busyMap = real.stream().collect(Collectors.groupingBy(
@@ -138,18 +161,6 @@ public class Tahap4 {
         double rata = Arrays.stream(busy).average().orElse(0);
         double std = Math.sqrt(Arrays.stream(busy).map(b -> (b - rata) * (b - rata)).average().orElse(0));
         double util = Arrays.stream(busy).sum() / (vms.size() * makespan) * 100;
-
-        System.out.printf("HASIL %-4s | selesai=%d | makespan=%.2f | resp=%.2f | tunggu=%.2f | throughput=%.3f task/s | util=%.1f%% | imbalance=%.2f | lewat deadline=%d%n",
-                KEBIJAKAN, real.size(), makespan, resp, wait, real.size() / makespan, util,
-                rata == 0 ? 0 : std / rata, telat);
-    }
-
-     static void laporanTambahan(List<Vm> vms) {
-        var real = broker.getCloudletFinishedList().stream()
-                .filter(c -> !pemicu.contains(c)).toList();
-        double makespan = real.stream().mapToDouble(Cloudlet::getFinishTime).max().orElse(0);
-        double maxWait = real.stream()
-                .mapToDouble(c -> c.getStartTime() - arrival.get(c)).max().orElse(0);
 
         // Energi: idle semua host sepanjang makespan + daya dinamis per core sibuk
         int[] coreHost = {4, 4, 8, 8, 16, 4, 8, 8, 16, 16};
@@ -162,12 +173,11 @@ public class Tahap4 {
             joule += dayaDinamisPerCore * (c.getFinishTime() - c.getStartTime());
         }
 
-        System.out.printf("EKSTRA n=%d seed=%s %s | makespan=%.2f | wait_max=%.2f | energi_Wh=%.1f%n",
-                Integer.getInteger("n", 60), System.getProperty("seed", "7"),
-                KEBIJAKAN, makespan, maxWait, joule / 3600.0);
+        return new Hasil(real.size(), makespan, resp, wait, real.size() / makespan, util,
+                rata == 0 ? 0 : std / rata, telat, maxWait, joule / 3600.0);
     }
 
-    static final String ATURAN_VM = System.getProperty("vmRule", "fast");
+    static String ATURAN_VM = System.getProperty("vmRule", "fast");
 
     static Vm pilihVm() {
         if (ATURAN_VM.equals("green")) {
